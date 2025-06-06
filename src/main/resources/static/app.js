@@ -128,8 +128,17 @@ function showSelectedUsers() {
 
             marker.addListener('click', () => {
                 infoWindow.setContent(`
-                    <div style="min-width: 200px">
-                        <h6>${user ? `${user.firstName} ${user.lastName}` : `Потребител #${location.user.id}`}</h6>
+                    <div style="min-width: 220px">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h6 style="margin: 0px 0px 0px 15px;">
+                        ${user ? `${user.firstName} ${user.lastName}` : `Потребител #${location.user.id}`}
+                        </h6>
+                        <button
+                            style="background: #007bff; color: white; border: none; border-radius: 4px; padding: 6px 10px; cursor: pointer; font-size: 12px;"
+                            onclick="showLocationHistory(${location.user.id})">
+                            <b>История</b></button>
+                    </div>
+                    <div style= "padding: 15px">
                         <p><strong>Дата:</strong> ${new Date(location.createDate).toLocaleString()}</p>
                         <p><strong>Координати:</strong> ${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}</p>
                     </div>
@@ -208,8 +217,81 @@ function markAllUsersWithLocation() {
         });
 }
 
+function showLocationHistory(userId) {
+    fetch(`http://localhost:8080/geolocations/user?userId=${userId}`)
+        .then(response => {
+            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+            return response.json();
+        })
+        .then(locations => {
+            if (!locations || locations.length === 0) {
+                alert("Няма намерени локации за този потребител.");
+                return;
+            }
+
+            let html = `<h4>История на локации (${locations.length})</h4><ul>`;
+            let count = 0;
+
+            locations.forEach(loc => {
+                reverseGeocodeOSM(loc.latitude, loc.longitude, (place) => {
+                    html += `<li>📍 ${place} – ${new Date(loc.createDate).toLocaleString()}</li>`;
+                    count++;
+                    if (count === locations.length) {
+                        html += `</ul>`;
+                        showModal(html);
+                    }
+                });
+            });
+        })
+        .catch(error => {
+            console.error("Грешка при зареждане на историята:", error);
+            alert("Грешка при зареждане на историята: " + error.message);
+        });
+}
+
+function reverseGeocodeOSM(lat, lng, callback) {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;
+
+    fetch(url, {
+        headers: {
+            'User-Agent': 'GeolocationDemo', // Добра практика е да посочиш име
+            'Accept-Language': 'bg' // По избор - български език ако е наличен
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data && data.address) {
+            // Вземаме града, ако има, иначе fallback
+            const city = data.address.city || data.address.town || data.address.village || data.address.hamlet || lat + " " + lng;
+            callback(city);
+        } else {
+            callback(lat + " " + lng);
+        }
+    })
+    .catch(error => {
+        console.error("Грешка при обратна геокодировка:", error);
+        callback("Грешка при определяне на адрес");
+    });
+}
+
+
+function showModal(htmlContent) {
+    document.getElementById("modalBody").innerHTML = htmlContent;
+    document.getElementById("modalOverlay").style.display = "block";
+}
+
+function hideModal() {
+    document.getElementById("modalOverlay").style.display = "none";
+}
+
+
 // Автоматично обновяване на маркерите всеки 3 секунди
-setInterval(showSelectedUsers, 3000);
+setInterval(showSelectedUsers, 5000);
 
 // Глобални функции за достъп от HTML
 window.initMap = initMap;

@@ -59,6 +59,22 @@ public class GeolocationServiceImpl implements GeolocationService {
     }
 
     @Override
+    public ResponseEntity<List<Geolocation>> getGeolocationsByUserId(Integer userId){
+        List<Geolocation> optionalGeolocation = geolocationRepository.getByUserId(userId);
+
+        if (!optionalGeolocation.isEmpty()) {
+            List<Geolocation> geolocations = optionalGeolocation.stream()
+                    .sorted(Comparator.comparing(Geolocation::getCreateDate))
+                    .toList();
+
+
+            return ResponseEntity.ok(geolocations);
+
+        }
+        throw new UserNotFoundException(userId);
+    }
+
+    @Override
     public ResponseEntity<GeolocationDTO> getGeolocation(Integer id) {
         Optional<Geolocation> optionalGeolocation = geolocationRepository.findById(id);
 

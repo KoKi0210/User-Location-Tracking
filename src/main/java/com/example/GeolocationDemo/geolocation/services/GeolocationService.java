@@ -14,6 +14,8 @@ public interface GeolocationService {
 
     ResponseEntity<Geolocation> getGeolocationByUserId(Integer userId);
 
+    ResponseEntity<List<Geolocation>> getGeolocationsByUserId(Integer id);
+
     ResponseEntity<GeolocationDTO> getGeolocation(Integer id);
 
     ResponseEntity<List<GeolocationDTO>> getGeolocations();

@@ -38,6 +38,11 @@ public class GeolocationController {
         return geolocationService.getGeolocationByUserId(userId);
     }
 
+    @GetMapping("/geolocations/user")
+    public ResponseEntity<List<Geolocation>> getGeolocationsByUserId(@RequestParam Integer userId){
+        return geolocationService.getGeolocationsByUserId(userId);
+    }
+
     @PutMapping("/geolocation/{id}")
     public ResponseEntity<String> updateGeolocation(@PathVariable Integer id, @RequestBody Geolocation geolocation) {
         return geolocationService.updateGeolocation(id, geolocation);
