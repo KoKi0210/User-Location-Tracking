@@ -3,6 +3,7 @@ let markers = [];
 let infoWindow;
 let allUsers = [];
 let allUsersWithLocation = [];
+let globalLocationInterval = null;
 
 function initMap() {
     map = new google.maps.Map(document.getElementById("map"), {
@@ -204,7 +205,8 @@ function markAllUsersWithLocation() {
             });
 
             updateSelectedCount();
-            showSelectedUsers(); // Автоматично показване на маркерите
+            showSelectedUsers();
+            startAutoUpdateMarkers();
         })
         .catch(error => {
             console.error("Грешка при зареждане на потребители с локации:", error);
@@ -217,7 +219,26 @@ function markAllUsersWithLocation() {
         });
 }
 
+function selectOnlyUserCheckbox(userId) {
+    unmarkAllUsers();
+    document.querySelectorAll('.user-checkbox').forEach(checkbox => {
+                    const searchedUserId = parseInt(checkbox.value);
+                    if(searchedUserId === userId){
+                    checkbox.checked = true;}
+                });
+    updateSelectedCount();
+}
+
 function showLocationHistory(userId) {
+
+    selectOnlyUserCheckbox(userId);
+    clearMarkers();
+    if (globalLocationInterval) {
+        clearInterval(globalLocationInterval);
+        globalLocationInterval = null;
+    }
+
+
     fetch(`http://localhost:8080/geolocations/user?userId=${userId}`)
         .then(response => {
             if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
@@ -229,17 +250,51 @@ function showLocationHistory(userId) {
                 return;
             }
 
-            let html = `<h4>История на локации (${locations.length})</h4><ul>`;
+           // let html = `<h4>История на локации (${locations.length})</h4><ul>`;
             let count = 0;
+            const colors = ['red', 'blue', 'green', 'yellow', 'purple', 'orange', 'pink', 'brown', 'gray', 'black'];
+            const bounds = new google.maps.LatLngBounds();
 
             locations.forEach(loc => {
                 reverseGeocodeOSM(loc.latitude, loc.longitude, (place) => {
-                    html += `<li>📍 ${place} – ${new Date(loc.createDate).toLocaleString()}</li>`;
+                    // Добави маркер на картата
+                    const marker = new google.maps.Marker({
+                        position: { lat: loc.latitude, lng: loc.longitude },
+                        map: map,
+                        title: `📍 ${place}`,
+                        icon: {
+                            url: `http://maps.google.com/mapfiles/ms/icons/${colors[count % colors.length]}-dot.png`
+                        }
+
+                    });
                     count++;
-                    if (count === locations.length) {
-                        html += `</ul>`;
-                        showModal(html);
-                    }
+                    markers.push(marker);
+                    bounds.extend(marker.getPosition());
+
+                        map.fitBounds(bounds);
+                            if (bounds.getNorthEast().equals(bounds.getSouthWest())) {
+                                map.setZoom(10);
+                                map.setCenter(bounds.getCenter());
+                            }
+
+                    // (по избор) инфо прозорец при клик
+                    const info = new google.maps.InfoWindow({
+                        content: `<strong>${place}</strong><br>${new Date(loc.createDate).toLocaleString()}`
+                    });
+
+                    marker.addListener("click", () => {
+                        info.open(map, marker);
+                    });
+
+//                    // Добавяне към HTML списъка
+//                    html += `<li>📍 ${place} – ${new Date(loc.createDate).toLocaleString()}</li>`;
+//                    count++;
+//
+//                    // Когато последната заявка приключи, покажи модал
+//                    if (count === locations.length) {
+//                        html += `</ul>`;
+//                        showModal(html);
+//                    }
                 });
             });
         })
@@ -290,8 +345,11 @@ function hideModal() {
 }
 
 
-// Автоматично обновяване на маркерите всеки 3 секунди
-setInterval(showSelectedUsers, 5000);
+function startAutoUpdateMarkers() {
+    globalLocationInterval = setInterval(() => {
+        showSelectedUsers();
+    }, 5000);
+}
 
 // Глобални функции за достъп от HTML
 window.initMap = initMap;
