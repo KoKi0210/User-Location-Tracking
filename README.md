@@ -7,7 +7,7 @@ Developed a backend web application for managing and tracking user locations. Th
 - Spring Boot
 - Spring Data JPA
 - MySQL
-- Maven / Gradle
+- Maven
 
 ## ⚙️ Configuration
 
